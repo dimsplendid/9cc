@@ -26,9 +26,26 @@ Token *token;
 
 // handle erorr function
 // parameters are the same with printf
-void error(char *fmt, ...) {
+// void error(char *fmt, ...) {
+//     va_list ap;
+//     va_start(ap, fmt);
+//     vfprintf(stderr, fmt, ap);
+//     fprintf(stderr, "\n");
+//     exit(1);
+// }
+
+// program input
+char *user_input;
+
+// return the wrong position
+void error_at(char *loc, char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
+
+    int pos = loc - user_input;
+    fprintf(stderr, "%s\n", user_input);
+    fprintf(stderr, "%*s", pos, ""); // print 'pos' number of space
+    fprintf(stderr,"^ ");
     vfprintf(stderr, fmt, ap);
     fprintf(stderr, "\n");
     exit(1);
@@ -46,7 +63,8 @@ bool consume(char op) {
 // keep going. Else waring as error.
 void expect(char op) {
     if (token->kind != TK_RESERVED || token->str[0] != op) {
-        error("Not '%c'\n", op);
+        // error("Not '%c'\n", op);
+        error_at(token->str, "Not '%c'\n", op);
     }
     token = token->next;
 }
@@ -54,8 +72,10 @@ void expect(char op) {
 // if next symbol is number, read it in and keep going to next.
 // And then return the number, or warning if it's error.
 int expect_number(void) {
-    if(token->kind != TK_NUM)
-        error("Not a number!\n");
+    if(token->kind != TK_NUM) {
+        // error("Not a number!\n");
+        error_at(token->str, "Not a number!\n");
+    }
     int val = token->val;
     token = token->next;
     return val;
@@ -97,11 +117,16 @@ Token *tokenize(char *p) {
             cur->val = strtol(p, &p, 10);
             continue;
         }
-        error("Fail to tokenize!\n");
+        // error("Fail to tokenize!\n");
+
+        // not correct symbol
+        cur = new_token(TK_EOF, cur, p++);
+        error_at(cur->str,"Fail to tokenize!\n");
     }
     new_token(TK_EOF, cur, p);
     return head.next;
 }
+
 
 int main(int argc, char **argv) {
     if (argc != 2) {
@@ -110,6 +135,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // input parameter
+    user_input = argv[1];
     // tokenize
     token = tokenize(argv[1]);
 
@@ -120,7 +147,7 @@ int main(int argc, char **argv) {
 
     // test if the formula start with number
     // output the initial number
-    printf("  mov rax, %d\n", expect_number());
+    printf("    mov rax, %d\n", expect_number());
 
     // comsume '+ <number>' or '- <number>'
     // and then output with assembly lang
