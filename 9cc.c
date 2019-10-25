@@ -127,6 +127,83 @@ Token *tokenize(char *p) {
     return head.next;
 }
 
+// EBNF
+// kinds of abstract syntax tree
+typedef enum {
+    ND_ADD, // +
+    ND_SUB, // -
+    ND_MUL, // *
+    ND_DIV, // /
+    ND_NUM, // integer
+} NodeKind;
+
+typedef struct Node Node;
+
+// structure of abstract
+struct Node {
+    NodeKind kind;  // kind of node
+    Node *lhs;      // left hand side
+    Node *rhs;      // right hand side
+    int val;        // only using for ND_NUM kin
+};
+
+Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
+    Node *node = calloc(1, sizeof(Node));
+    node->kind = kind;
+    node->lhs = lhs;
+    node->rhs = rhs;
+    return node;
+}
+
+Node *new_node_num(int val) {
+    Node *node = calloc(1, sizeof(Node));
+    node->kind = ND_NUM;
+    node->val = val;
+    return node;
+}
+
+Node *expr();
+Node *mul();
+Node *term();
+
+Node *expr() {
+    Node *node = mul();
+
+    for (;;) {
+        if (consume('+'))
+            node = new_node(ND_ADD, node, mul());
+        else if (consume('-'))
+            node = new_node(ND_SUB, node, mul());
+        else
+            return node;        
+    }
+}
+
+Node *mul() {
+    Node *node = term();
+
+    for(;;) {
+        if (consume('*'))
+            node = new_node(ND_MUL, node, term());
+        else if (consume('/'))
+            node = new_node(ND_DIV, node, term());
+        else
+            return node;
+        
+    }
+}
+
+Node *term() {
+    // If the next token is "(", it should be "(" expr ")"
+    if (consume('(')) {
+        Node *node = expr();
+        expect(')');
+        return node;
+    }
+
+    // nor it should be a number
+    return new_node_num(expect_number());
+}
 
 int main(int argc, char **argv) {
     if (argc != 2) {
