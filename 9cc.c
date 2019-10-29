@@ -163,9 +163,17 @@ Node *new_node_num(int val) {
     return node;
 }
 
+/*
+expr = mul("+" mul | "-" mul)*
+mul = unary("*" unary | "/" unary)*
+unary = ("+" | "-")? term
+term = num | "(" expr ")"
+*/
+
 Node *expr();
 Node *mul();
 Node *term();
+Node *unary();
 
 Node *expr() {
     Node *node = mul();
@@ -181,13 +189,13 @@ Node *expr() {
 }
 
 Node *mul() {
-    Node *node = term();
+    Node *node = unary();
 
     for(;;) {
         if (consume('*'))
-            node = new_node(ND_MUL, node, term());
+            node = new_node(ND_MUL, node, unary());
         else if (consume('/'))
-            node = new_node(ND_DIV, node, term());
+            node = new_node(ND_DIV, node, unary());
         else
             return node;
         
@@ -204,6 +212,14 @@ Node *term() {
 
     // nor it should be a number
     return new_node_num(expect_number());
+}
+
+Node *unary() {
+    if (consume('+'))
+        return term();
+    if (consume('-'))
+        return new_node(ND_SUB, new_node_num(0), term());
+    return term();
 }
 
 void gen(Node *node);
