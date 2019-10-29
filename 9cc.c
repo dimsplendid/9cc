@@ -16,9 +16,10 @@ typedef struct Token Token;
 // Token type
 struct Token {
     TokenKind kind; // kind of token
-    Token *next;   // next input token
+    Token *next;    // next input token
     int val;        // the number of TK_NUM
     char *str;      // token string
+    int len;        // token length
 };
 
 // processing token
@@ -53,7 +54,9 @@ void error_at(char *loc, char *fmt, ...) {
 
 // if the next symbol is expected, read it in and keep going to next.
 bool consume(char op) {
-    if (token->kind != TK_RESERVED || token->str[0] != op)
+    if (token->kind != TK_RESERVED ||
+        strlen(op) != token->len ||
+        memcmp(token->str, op, token->len))
         return false;
     token = token->next;
     return true;
@@ -164,7 +167,16 @@ Node *new_node_num(int val) {
 }
 
 /*
-expr = mul("+" mul | "-" mul)*
+1. == !=
+2. < <= > >=
+3. + -
+4. * /
+5. unary +, unary -
+6. ()
+expr        = equality
+equality    = relational ("==" relational | "!=" relational)*
+relational  = add ("<" add | "<=" add | ">=" add | ">=" add)*
+add = mul("+" mul | "-" mul)*
 mul = unary("*" unary | "/" unary)*
 unary = ("+" | "-")? term
 term = num | "(" expr ")"
