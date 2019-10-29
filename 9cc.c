@@ -107,7 +107,8 @@ Token *tokenize(char *p) {
             continue;
         }
 
-        if (*p == '+' || *p == '-') {
+        if (*p == '+' || *p == '-' || *p == '*'
+                || *p == '/' || *p == '(' || *p == ')') {
             cur = new_token(TK_RESERVED, cur, p++);
             continue;
         }
@@ -244,32 +245,22 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // input parameter
+    // token analysis
     user_input = argv[1];
-    // tokenize
     token = tokenize(argv[1]);
+    Node *node = expr();
 
     // output the formor comand of assembly lang
     printf(".intel_syntax noprefix\n");
     printf(".global main\n");
     printf("main:\n");
 
-    // test if the formula start with number
-    // output the initial number
-    printf("    mov rax, %d\n", expect_number());
+    // output the command by climbing syntax tree
+    gen(node);
 
-    // comsume '+ <number>' or '- <number>'
-    // and then output with assembly lang
-    while (!at_eof()) {
-        if (consume('+')) {
-            printf("    add rax, %d\n",expect_number());
-            continue;
-        }
-
-        expect('-');
-        printf("    sub rax, %d\n", expect_number());
-    }
-
-    printf("  ret\n");
+    // let the result stay in the top of stack
+    // and pop to rax as return value
+    printf("    pop rax\n");
+    printf("    ret\n");
     return 0;
 }
