@@ -1,5 +1,41 @@
 #include "9cc.h"
 
+// if the next symbol is expected, read it in and keep going to next.
+bool consume(char *op) {
+    if (token->kind != TK_RESERVED ||
+        strlen(op) != token->len ||
+        memcmp(token->str, op, token->len))
+        return false;
+    token = token->next;
+    return true;
+}
+
+// If the next token meet the operater, read the token and
+// keep going. Else waring as error.
+void expect(char op) {
+    if (token->kind != TK_RESERVED || token->str[0] != op) {
+        // error("Not '%c'\n", op);
+        error_at(token->str, "Not '%c'\n", op);
+    }
+    token = token->next;
+}
+
+// if next symbol is number, read it in and keep going to next.
+// And then return the number, or warning if it's error.
+int expect_number(void) {
+    if(token->kind != TK_NUM) {
+        // error("Not a number!\n");
+        error_at(token->str, "Not a number!\n");
+    }
+    int val = token->val;
+    token = token->next;
+    return val;
+}
+
+bool at_eof(void){
+    return token->kind == TK_EOF;
+}
+
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = kind;
