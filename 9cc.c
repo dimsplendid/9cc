@@ -1,29 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <string.h>
+#include "9cc.h"
 
-// kinds of tokens
-typedef enum {
-    TK_RESERVED,    // symbols
-    TK_NUM,         // integer token
-    TK_EOF,         // token of end of file
-} TokenKind;
-
-typedef struct Token Token;
-// Token type
-struct Token {
-    TokenKind kind; // kind of token
-    Token *next;    // next input token
-    int val;        // the number of TK_NUM
-    char *str;      // token string
-    int len;        // token length
-};
-
-// processing token
-Token *token;
 
 // handle erorr function
 // parameters are the same with printf
@@ -34,9 +10,6 @@ Token *token;
 //     fprintf(stderr, "\n");
 //     exit(1);
 // }
-
-// program input
-char *user_input;
 
 // return the wrong position
 void error_at(char *loc, char *fmt, ...) {
@@ -53,7 +26,7 @@ void error_at(char *loc, char *fmt, ...) {
 }
 
 // if the next symbol is expected, read it in and keep going to next.
-bool consume(char op) {
+bool consume(char *op) {
     if (token->kind != TK_RESERVED ||
         strlen(op) != token->len ||
         memcmp(token->str, op, token->len))
@@ -89,10 +62,11 @@ bool at_eof(void){
 }
 
 // build a new token and link to cur.
-Token *new_token(TokenKind kind, Token *cur, char *str) {
+Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
     Token *tok = calloc(1,sizeof(Token));
     tok->kind = kind;
     tok->str = str;
+    tok->len = len;
     cur->next = tok;
     return tok;
 }
@@ -112,44 +86,24 @@ Token *tokenize(char *p) {
 
         if (*p == '+' || *p == '-' || *p == '*'
                 || *p == '/' || *p == '(' || *p == ')') {
-            cur = new_token(TK_RESERVED, cur, p++);
+            cur = new_token(TK_RESERVED, cur, p++,1);
             continue;
         }
 
         if (isdigit(*p)) {
-            cur = new_token(TK_NUM, cur, p);
+            cur = new_token(TK_NUM, cur, p, 0);
             cur->val = strtol(p, &p, 10);
             continue;
         }
         // error("Fail to tokenize!\n");
 
         // not correct symbol
-        cur = new_token(TK_EOF, cur, p++);
+        cur = new_token(TK_EOF, cur, p++, 0);
         error_at(cur->str,"Fail to tokenize!\n");
     }
-    new_token(TK_EOF, cur, p);
+    new_token(TK_EOF, cur, p, 0);
     return head.next;
 }
-
-// EBNF
-// kinds of abstract syntax tree
-typedef enum {
-    ND_ADD, // +
-    ND_SUB, // -
-    ND_MUL, // *
-    ND_DIV, // /
-    ND_NUM, // integer
-} NodeKind;
-
-typedef struct Node Node;
-
-// structure of abstract
-struct Node {
-    NodeKind kind;  // kind of node
-    Node *lhs;      // left hand side
-    Node *rhs;      // right hand side
-    int val;        // only using for ND_NUM kin
-};
 
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
     Node *node = calloc(1, sizeof(Node));
@@ -180,20 +134,16 @@ add = mul("+" mul | "-" mul)*
 mul = unary("*" unary | "/" unary)*
 unary = ("+" | "-")? term
 term = num | "(" expr ")"
+> compare -> to be implemented
 */
-
-Node *expr();
-Node *mul();
-Node *term();
-Node *unary();
 
 Node *expr() {
     Node *node = mul();
 
     for (;;) {
-        if (consume('+'))
+        if (consume("""+"))
             node = new_node(ND_ADD, node, mul());
-        else if (consume('-'))
+        else if (consume("-"))
             node = new_node(ND_SUB, node, mul());
         else
             return node;        
@@ -204,9 +154,9 @@ Node *mul() {
     Node *node = unary();
 
     for(;;) {
-        if (consume('*'))
+        if (consume("*"))
             node = new_node(ND_MUL, node, unary());
-        else if (consume('/'))
+        else if (consume("/"))
             node = new_node(ND_DIV, node, unary());
         else
             return node;
@@ -216,7 +166,7 @@ Node *mul() {
 
 Node *term() {
     // If the next token is "(", it should be "(" expr ")"
-    if (consume('(')) {
+    if (consume("(")) {
         Node *node = expr();
         expect(')');
         return node;
@@ -227,14 +177,13 @@ Node *term() {
 }
 
 Node *unary() {
-    if (consume('+'))
+    if (consume("+"))
         return term();
-    if (consume('-'))
+    if (consume("-"))
         return new_node(ND_SUB, new_node_num(0), term());
     return term();
 }
 
-void gen(Node *node);
 void gen(Node *node) {
     if (node->kind == ND_NUM) {
         printf("    push %d\n", node->val);
