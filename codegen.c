@@ -30,6 +30,10 @@ void gen(Node *node) {
             printf("    cmp rax, rdi\n");
             printf("    ");
             break;
+        case ND_EQ:
+            printf("    cmp rax, rdi\n");
+            printf("    sete al\n");
+            printf("    movzb rax, al\n");
     }
 
     printf("    push rax\n");
